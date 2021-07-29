@@ -11,4 +11,4 @@ Live-Demo:
 http://flagsJS.surge.sh
 
 
- ![alt text](https://ibb.co/zhz8Jz5)
+ ![alt text](https://i.ibb.co/nsF3CF0/2021-07-29-2-11-49.png)
