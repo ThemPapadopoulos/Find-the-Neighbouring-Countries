@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Βρες τους γείτονες</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <script src="/countries.js"></script>
+  <script defer>
+    //start program
+    document.addEventListener("DOMContentLoaded", () => {
+      // μεταβλητες
+      let randomCountry;
+      let wrongSelectionCounter;
+      const urlCountry = "https://restcountries.eu/rest/v2/name/";
+      const urlCode = "https://restcountries.eu/rest/v2/alpha/";
+      let randomNonNeighbour;
+      arrayShuffled = [];
+      let readPoints;
+      newArray = [];
+      code3Array = [];
+
+      //start a new Game
+      //οταν φορτωνει η σελιδα ή κανει refresh
+
+      randomiser();
+      //  οταν ξεκιναει το παιχνιδι ή οταν παταμε επομενο γύρο κραταει το σκορ
+      retainScore();
+      // το παιχνιδι ξεκιναει αρχικα με το νουμερο 1.
+      round.innerHTML++;
+
+
+      // αρχικα βρισκουμε μια τυχαια χωρα
+      function randomiser() {
+        randomFlag.innerHTML = "";
+        randomCountry = shuffleArray(countryObjects);
+        //append the country name
+        randomFlagName.innerHTML = randomCountry.name;
+        // take the name from countries.js and convert it to lower case
+        var noCaps = randomCountry.code3.toLowerCase();
+        // append the flag
+        randomFlag.innerHTML =
+          '<img src="https://restcountries.eu/data/' +
+          noCaps +
+          '.svg" alt="' +
+          noCaps +
+          '">';
+
+        //then find neighbours of that country from the API
+        findBorders(randomCountry.name);
+        wrongSelectionCounter = 0;
+      }
+
+      function loadCountryNameFromCode(code) {
+        // επιστρέφει Promise του αποτελέσματος – του ονόματος της χώρας
+        return new Promise((resolve, reject) => {
+          fetch(urlCode + code)
+            .then((resp) => {
+              if (resp.status == 200) {
+                return resp.json();
+              } else reject(new Error(response.status));
+            })
+            .then((data) => {
+              resolve(data["name"]); // όνομα από κωδικό "Greece" από "GR"
+            });
+        });
+      }
+
+      // η λειτουργια που προσθετει διπλους ψευτικους γειτονες --------------------------
+      function addRandomNeighbours() {
+        // add double fake neighbours
+        for (let i = 0; i < newArray.length * 2; i++) {
+          randomCountry = shuffleArray(countryObjects);
+          //console.log(randomCountry);
+          var noCaps = randomCountry.code3.toLowerCase();
+          let name = randomCountry.name;
+          // if country is already appeared, skip it and select another
+          //this guaranties the number of fake neighbours to be double of the true neighbours
+          if (
+            document
+              .querySelector(".availableCountries")
+              .innerHTML.indexOf(randomCountry.name) !== -1
+          ) {
+            randomCountry = shuffleArray(countryObjects);
+            var noCaps = randomCountry.code3.toLowerCase();
+            let name = randomCountry.name;
+            document.querySelector(".availableCountries").innerHTML +=
+              '<div class="neighbour"><img id="randomNeighborFlag"  class="neighbourflag wrong" src="https://restcountries.eu/data/' +
+              noCaps +
+              '.svg" alt="' +
+              name +
+              '"><h3 id="randomNeighborName">' +
+              name +
+              "</h3></div>";
+            continue;
+          }
+          // something
+
+          document.querySelector(".availableCountries").innerHTML +=
+            '<div class="neighbour wrong"><img id="randomNeighborFlag"  class="neighbourflag wrong" src="https://restcountries.eu/data/' +
+            noCaps +
+            '.svg" alt="' +
+            name +
+            '"><h3 id="randomNeighborName">' +
+            name +
+            "</h3></div>";
+        }
+        neighbourClickable();
+      }
+
+      // Η ΛΕΙΤΟΥΡΓΙΑ ΠΟΥ ΒΡΙΣΚΕΙ ΤΟΥΣ ΓΕΙΤΟΝΕΣ ΒΑΣΗ ΤΟΥ ΟΝΟΜΑΤΟΣ ΤΗΣ ΤΥΧΑΙΑΣ ΧΩΡΑΣ --------------
+      function findBorders(country) {
+        fetch(urlCountry + country)
+          .then((response) => {
+            if (response.status === 200) {
+              return response.json();
+            } else throw new Error(response.status);
+          })
+          .then((data) => {
+            if (data[0].borders.length > 0) {
+              // οι κωδικοί των γειτόνων
+              const theCountries = [];
+              data[0].borders.forEach((item) => {
+                theCountries.push(loadCountryNameFromCode(item));
+              });
+              Promise.all(theCountries) //  array από Promises
+                .then((allCountriesNames) => {
+                  //και τρεχει function για να εμφανισει τους γειτονες απο κατω.
+                  //------ τα σταδια στην μπαρα ισουνται με τον αριθμο των σωστων γειτονων! ---------
+                  progress.max = allCountriesNames.length;
+
+                  allCountriesNames.forEach((name) => {
+                    //filter countries fron countries.js first
+                    var result = countryObjects.filter((obj) => {
+                      return obj.name === name;
+                    });
+                    // for each push to array of neighbours
+                    newArray.push(result);
+                  });
+
+                  for (let index = 0; index < newArray.length; index++) {
+                    for (let x = 0; x < newArray[index].length; x++) {
+                      const element = newArray[index][x].code3.toLowerCase();
+                      const name = newArray[index][x].name;
+                      document.querySelector(".availableCountries").innerHTML +=
+                        '<div class="neighbour"><img id="randomNeighborFlag" class="neighbourflag" src="https://restcountries.eu/data/' +
+                        element +
+                        '.svg" alt="' +
+                        element +
+                        '"><h3 id="randomNeighborName">' +
+                        name +
+                        "</h3></div>";
+                    }
+                  }
+                  //  ++++ add double non neighbours in board ++++
+                  addRandomNeighbours();
+
+                  // shuffle all Neighbours 2 times;
+                  suffleNeighbours();
+                  suffleNeighbours();
+
+                  // shuffleNeighbours();
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
+            } else {
+              // ΑΝ ΔΕΝ ΕΧΕΙ ΓΕΙΤΟΝΙΚΕΣ ΧΩΡΕΣ - ΞΑΝΑΕΚΤΕΛΕΙΤΑΙ
+              randomiser();
+            }
+          });
+      }
+
+      //για την διατηρηση του σκορ κατα το πατημα επομενου γυρου ή refresh
+      function retainScore() {
+        points.innerHTML = localStorage.getItem("points");
+        round.innerHTML = localStorage.getItem("round");
+      };
+
+      // λειτουργια για να ανακατευει ολες τις επιλογες
+      function suffleNeighbours() {
+        countries = [];
+        arrShuffled = [];
+        countries = document.querySelectorAll(".neighbour");
+        arrShuffled = shuffleAll(countries);
+        for (let i = 0; i < arrShuffled.length; i++) {
+          availableCountries.appendChild(arrShuffled[i]);
+        }
+      }
+
+      // τι συμβαινει αν κλικαρω μια σημαια γειτονα.
+      function neighbourClickable() {
+        var neighbourflag = document.querySelectorAll(".neighbourflag");
+  
+        for (let n = 0; n < neighbourflag.length; n++) {
+          neighbourflag[n].addEventListener("click", () => {
+            if (progress.max !== progress.value) {
+              if (neighbourflag[n].classList.contains("wrong")) {
+                //αν δεν ειναι πραγματικος γειτονας
+                console.log("wrong");
+                wrongSelectionCounter++;
+
+                neighbourflag[n].parentNode.style.border = "2px solid red";
+                neighbourflag[n].classList += " unclickable";
+                if (wrongSelectionCounter !== progress.max) {
+                  points.innerHTML--;
+                  points.innerHTML--;
+                  points.innerHTML--;
+                  localStorage.setItem("points", points.innerHTML);
+
+                } else {
+                  points.innerHTML--;
+                  points.innerHTML--;
+                  points.innerHTML--;
+                  console.log("you looseeee!");
+                  // loose screen
+                  availableCountries.classList.add("youWonLoose");
+                  availableCountries.classList.add("unclickable");
+                  result.innerHTML = "Κρίμα, χάσατε!";
+
+                  localStorage.setItem("points", points.innerHTML);
+
+                }
+              } else {
+                //αν ειναι πραγματικος γειτονας
+                neighbourflag[n].parentNode.style.border = "2px solid green";
+                neighbourflag[n].classList += " unclickable";
+                console.log("correct");
+                progress.value++;
+                points.innerHTML++;
+                points.innerHTML++;
+                points.innerHTML++;
+                points.innerHTML++;
+                points.innerHTML++;
+                console.log("win");
+                neighbourflag.classList += " unclickable";
+                localStorage.setItem("points", points.innerHTML);
+
+                //------- if progress bar is full -------
+                if (progress.max == progress.value) {
+                  console.log("you won!");
+                  result.innerHTML = "Τους βρήκατε όλους!";
+                  // win screen
+                  availableCountries.classList.add("youWonLoose");
+                  availableCountries.classList.add("unclickable");
+                  localStorage.setItem("points", points.innerHTML);
+
+                }
+              }
+            }
+          });
+        }
+      }
+
+
+      // ******** EVENT LISTENERS *********
+      //event listener to new game button
+      //Τρεχει το randomizer + διαγραφει γύρους και σκορ.
+      document.querySelector("#btn-new-game").addEventListener("click", () => {
+        location.reload();
+        localStorage.clear();
+      });
+
+      //event listener to next round button
+      //Τρεχει το randomizer χωρις διαγραφη της προοδου του παιχτη.
+      document.getElementById("btn-next-round").addEventListener("click", () => {
+        localStorage.setItem("round", round.innerHTML);
+        location.reload();
+      });
+
+    });
+//end program
+  </script>
+</head>
+
+<body>
+  <div class="game-panel">
+    <div class="grid-container">
+      <div class="randomSelection">
+        <div id="my-country">
+          <div id="randomFlag">
+
+          </div>
+          <h1 id="randomFlagName"></h1>
+        </div>
+        <progress min="0" max="5" value="0" id="progress"></progress>
+      </div>
+
+      <div class="sideInfo" id="sidebar">
+        <div>
+          <h2>Βρες τους γείτονες</h2>
+          <div id="score">
+            <h4>Γύρος: <span id="round">1</span></h4>
+            <h4>Σκόρ: <span id="points">0</span></h4>
+          </div>
+        </div>
+
+        <div id='result'></div>
+
+        <div id="buttons">
+          <button id="btn-next-round">Επόμενη Χώρα</button>
+          <button id="btn-new-game">Νέο παιχνίδι</button>
+        </div>
+
+      </div>
+      <div class="availableCountries" id="availableCountries">
+        <!-- neigbouring countries added here -->
+        <div class="winloosetext" id='winloosetext' hidden></div>
+      </div>
+
+</body>
+<script>
+  //Το παρακάτω αφορά μόνο τους χρήστες macOS.
+  if (navigator.appVersion.indexOf("Macintosh") > 0) {
+    document.body.style.fontFamily = '"Open Sans"';
+  }
+</script>
+
+</html>
